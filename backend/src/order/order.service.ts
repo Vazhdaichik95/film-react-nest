@@ -1,8 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -16,38 +12,47 @@ export class OrderService {
   async create(dto: CreateOrderDto): Promise<OrderResponseDto> {
     const bookedTickets = [];
 
-    for (const ticket of dto.tickets) {
-      const film = await this.filmRepository.findByFilmId(ticket.film);
+    try {
+      const requestedPlaces = new Set<string>();
 
-      if (!film) {
-        throw new NotFoundException(`Film with id "${ticket.film}" not found`);
-      }
+      for (const ticket of dto.tickets) {
+        const requestKey = `${ticket.film}:${ticket.session}:${ticket.row}:${ticket.seat}`;
 
-      const session = film.schedule.find(
-        (schedule) => schedule.id === ticket.session,
-      );
+        if (requestedPlaces.has(requestKey)) {
+          // просто прерываем цикл и возвращаем пустой заказ
+          return { total: 0, items: [] };
+        }
 
-      if (!session) {
-        throw new NotFoundException(
-          `Session with id "${ticket.session}" not found`,
+        requestedPlaces.add(requestKey);
+
+        const film = await this.filmRepository.findByFilmId(ticket.film);
+        if (!film) {
+          return { total: 0, items: [] };
+        }
+
+        const session = film.schedule.find(
+          (schedule) => schedule.id === ticket.session,
         );
+        if (!session) {
+          return { total: 0, items: [] };
+        }
+
+        const place = `${ticket.row}:${ticket.seat}`;
+        if (session.taken.includes(place)) {
+          return { total: 0, items: [] };
+        }
+
+        session.taken.push(place);
+        await film.save();
+
+        bookedTickets.push({
+          ...ticket,
+          id: randomUUID(),
+        });
       }
-
-      const place = `${ticket.row}:${ticket.seat}`;
-
-      if (session.taken.includes(place)) {
-        throw new BadRequestException(
-          `Seat ${place} is already taken for session "${ticket.session}"`,
-        );
-      }
-
-      session.taken.push(place);
-      await film.save();
-
-      bookedTickets.push({
-        ...ticket,
-        id: randomUUID(),
-      });
+    } catch {
+      // на случай неожиданных исключений
+      return { total: 0, items: [] };
     }
 
     return {
