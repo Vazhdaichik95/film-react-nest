@@ -19,7 +19,6 @@ export class OrderService {
         const requestKey = `${ticket.film}:${ticket.session}:${ticket.row}:${ticket.seat}`;
 
         if (requestedPlaces.has(requestKey)) {
-          // просто прерываем цикл и возвращаем пустой заказ
           return { total: 0, items: [] };
         }
 
@@ -43,7 +42,7 @@ export class OrderService {
         }
 
         session.taken.push(place);
-        await film.save();
+        await this.filmRepository.bookPlace(session.id, session.taken);
 
         bookedTickets.push({
           ...ticket,
@@ -51,7 +50,6 @@ export class OrderService {
         });
       }
     } catch {
-      // на случай неожиданных исключений
       return { total: 0, items: [] };
     }
 
