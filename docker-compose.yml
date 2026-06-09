@@ -1,9 +1,6 @@
 services:
   frontend-builder:
-    image: ghcr.io/vazhdaichik95/film-react-nest-frontend:latest
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    image: ${FRONTEND_IMAGE}
     volumes:
       - frontend_dist:/frontend-dist
     networks:
@@ -11,72 +8,58 @@ services:
     restart: "no"
 
   backend:
-    image: ghcr.io/vazhdaichik95/film-react-nest-backend:latest
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: ${BACKEND_IMAGE}
     env_file:
-      - .env.docker
+      - .env
     depends_on:
       postgres:
         condition: service_healthy
     expose:
-      - "3000"
+      - "${PORT}"
     networks:
       - app_network
+    restart: unless-stopped
 
   nginx:
-    image: ghcr.io/vazhdaichik95/film-react-nest-nginx:latest
-    build:
-      context: ./nginx
-      dockerfile: Dockerfile
+    image: ${NGINX_IMAGE}
     depends_on:
       - backend
       - frontend-builder
     ports:
-      - "80:80"
+      - "${NGINX_PORT}:80"
     volumes:
       - frontend_dist:/usr/share/nginx/html:ro
     networks:
       - app_network
+    restart: unless-stopped
 
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: film_db
-      POSTGRES_USER: film_user
-      POSTGRES_PASSWORD: film_password
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "5433:5432"
+      - "${POSTGRES_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - app_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U film_user -d film_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 10s
+    restart: always
 
   pgadmin:
     image: dpage/pgadmin4:8
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
     ports:
-      - "8080:80"
+      - "${PGADMIN_PORT}:80"
     depends_on:
       - postgres
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-    networks:
-      - app_network
-
-networks:
-  app_network:
-
-volumes:
-  postgres_data:
-  pgadmin_data:
-  frontend_dist:
+    

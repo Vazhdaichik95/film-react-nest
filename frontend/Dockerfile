@@ -1,11 +1,15 @@
-FROM node:20-bookworm-slim
+FROM node:20-bookworm-slim AS builder
 
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 
 COPY . .
 RUN npm run build
 
-CMD ["sh", "-c", "rm -rf /frontend-dist/* && cp -r /app/dist/. /frontend-dist"]
+FROM alpine:3.20
+
+WORKDIR /frontend-dist
+
+COPY --from=builder /app/dist ./
