@@ -1,5 +1,9 @@
 # FILM!
 
+## Ссылка на деплой
+
+http://katefilms.nomorepartiessite.ru/
+
 ## Установка
 
 ### MongoDB
