@@ -21,8 +21,8 @@ import { Schedule } from './repository/entities/schedule.entity';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         type: 'postgres',
-        host: configService.get<string>('DATABASE_HOST') || 'localhost',
-        port: Number(configService.get<string>('DATABASE_PORT')) || 5433,
+        host: configService.get<string>('DATABASE_HOST') || 'postgres',
+        port: Number(configService.get<string>('DATABASE_PORT')) || 5432,
         database: configService.get<string>('DATABASE_NAME') || 'film_db',
         username: configService.get<string>('DATABASE_USERNAME') || 'film_user',
         password: String(
